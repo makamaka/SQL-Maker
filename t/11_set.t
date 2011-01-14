@@ -41,102 +41,93 @@ subtest 'error' => sub {
 
 subtest 'union' => sub {
     my $set = union( $s1, $s2 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) UNION SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) UNION (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '100, 200';
 
     $set = union( $set, $s3 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) UNION SELECT id FROM table2 WHERE (bar = ?) UNION SELECT id FROM table3 WHERE (baz = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) UNION (SELECT id FROM table2 WHERE (bar = ?)) UNION (SELECT id FROM table3 WHERE (baz = ?))};
     is join(', ', $set->bind), '100, 200, 300';
 
     $set = union( $s3, union( $s1, $s2 ) );
-    is $set->as_sql, qq{SELECT id FROM table3 WHERE (baz = ?) UNION SELECT id FROM table1 WHERE (foo = ?) UNION SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table3 WHERE (baz = ?)) UNION (SELECT id FROM table1 WHERE (foo = ?)) UNION (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '300, 100, 200';
 
     $set = union_all( $s1, $s2 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) UNION ALL SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) UNION ALL (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '100, 200';
 
-    TODO: {
-        todo_skip 'foo', 2;
-        $set->add_order_by( 'id' );
-        is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) UNION ALL SELECT id FROM table2 WHERE (bar = ?) ORDER BY id};
-        is join(', ', $set->bind), '100, 200';
-    };
+    $set->add_order_by( 'id' );
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) UNION ALL (SELECT id FROM table2 WHERE (bar = ?)) ORDER BY id};
+    is join(', ', $set->bind), '100, 200';
 
     $set = union( union( $s3, $s1 ), $s2 );
-    is $set->as_sql, qq{SELECT id FROM table3 WHERE (baz = ?) UNION SELECT id FROM table1 WHERE (foo = ?) UNION SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table3 WHERE (baz = ?)) UNION (SELECT id FROM table1 WHERE (foo = ?)) UNION (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '300, 100, 200';
 
     $set = union( union( $s1, $s2 ), union( $s2, $s3) );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) UNION SELECT id FROM table2 WHERE (bar = ?) UNION SELECT id FROM table2 WHERE (bar = ?) UNION SELECT id FROM table3 WHERE (baz = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) UNION (SELECT id FROM table2 WHERE (bar = ?)) UNION (SELECT id FROM table2 WHERE (bar = ?)) UNION (SELECT id FROM table3 WHERE (baz = ?))};
     is join(', ', $set->bind), '100, 200, 200, 300';
 };
 
 subtest 'intersect' => sub {
     my $set = intersect( $s1, $s2 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) INTERSECT SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) INTERSECT (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '100, 200';
 
     $set = intersect( $set, $s3);
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) INTERSECT SELECT id FROM table2 WHERE (bar = ?) INTERSECT SELECT id FROM table3 WHERE (baz = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) INTERSECT (SELECT id FROM table2 WHERE (bar = ?)) INTERSECT (SELECT id FROM table3 WHERE (baz = ?))};
     is join(', ', $set->bind), '100, 200, 300';
 
     $set = intersect( $s3, intersect( $s1, $s2 ) );
-    is $set->as_sql, qq{SELECT id FROM table3 WHERE (baz = ?) INTERSECT SELECT id FROM table1 WHERE (foo = ?) INTERSECT SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table3 WHERE (baz = ?)) INTERSECT (SELECT id FROM table1 WHERE (foo = ?)) INTERSECT (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '300, 100, 200';
 
     $set = intersect_all( $s1, $s2 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) INTERSECT ALL SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) INTERSECT ALL (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '100, 200';
 
-    TODO: {
-        todo_skip foo => 2;
-        $set->add_order_by( 'id' );
-        is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) INTERSECT ALL SELECT id FROM table2 WHERE (bar = ?) ORDER BY id};
-        is join(', ', $set->bind), '100, 200';
-    };
+    $set->add_order_by( 'id' );
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) INTERSECT ALL (SELECT id FROM table2 WHERE (bar = ?)) ORDER BY id};
+    is join(', ', $set->bind), '100, 200';
 };
 
 subtest 'except' => sub {
     my $set = except( $s1, $s2 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) EXCEPT SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) EXCEPT (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '100, 200';
 
     $set = except( $set, $s3 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) EXCEPT SELECT id FROM table2 WHERE (bar = ?) EXCEPT SELECT id FROM table3 WHERE (baz = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) EXCEPT (SELECT id FROM table2 WHERE (bar = ?)) EXCEPT (SELECT id FROM table3 WHERE (baz = ?))};
     is join(', ', $set->bind), '100, 200, 300';
 
     $set = except( $s3, except( $s1, $s2 ) );
-    is $set->as_sql, qq{SELECT id FROM table3 WHERE (baz = ?) EXCEPT SELECT id FROM table1 WHERE (foo = ?) EXCEPT SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table3 WHERE (baz = ?)) EXCEPT (SELECT id FROM table1 WHERE (foo = ?)) EXCEPT (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '300, 100, 200';
 
     $set = except_all( $s1, $s2 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) EXCEPT ALL SELECT id FROM table2 WHERE (bar = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) EXCEPT ALL (SELECT id FROM table2 WHERE (bar = ?))};
     is join(', ', $set->bind), '100, 200';
 
-    TODO: {
-        todo_skip foo => 2;
-        $set->add_order_by( 'id' );
-        is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) EXCEPT ALL SELECT id FROM table2 WHERE (bar = ?) ORDER BY id};
-        is join(', ', $set->bind), '100, 200';
-    };
+    $set->add_order_by( 'id' )->limit(10)->offset(5);
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) EXCEPT ALL (SELECT id FROM table2 WHERE (bar = ?)) ORDER BY id LIMIT 10 OFFSET 5};
+    is join(', ', $set->bind), '100, 200';
 };
 
 subtest 'multiple' => sub {
     my $set = intersect( except($s1, $s2), $s3 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) EXCEPT SELECT id FROM table2 WHERE (bar = ?) INTERSECT SELECT id FROM table3 WHERE (baz = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) EXCEPT (SELECT id FROM table2 WHERE (bar = ?)) INTERSECT (SELECT id FROM table3 WHERE (baz = ?))};
     is join(', ', $set->bind), '100, 200, 300';
 
     $set = intersect_all( except( $s1, $s2 ), $s3 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) EXCEPT SELECT id FROM table2 WHERE (bar = ?) INTERSECT ALL SELECT id FROM table3 WHERE (baz = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) EXCEPT (SELECT id FROM table2 WHERE (bar = ?)) INTERSECT ALL (SELECT id FROM table3 WHERE (baz = ?))};
     is join(', ', $set->bind), '100, 200, 300';
 
     $set = union( except( $s1, $s2), $s3 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) EXCEPT SELECT id FROM table2 WHERE (bar = ?) UNION SELECT id FROM table3 WHERE (baz = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) EXCEPT (SELECT id FROM table2 WHERE (bar = ?)) UNION (SELECT id FROM table3 WHERE (baz = ?))};
     is join(', ', $set->bind), '100, 200, 300';
 
     $set = union( except_all( $s1, $s2 ), $s3 );
-    is $set->as_sql, qq{SELECT id FROM table1 WHERE (foo = ?) EXCEPT ALL SELECT id FROM table2 WHERE (bar = ?) UNION SELECT id FROM table3 WHERE (baz = ?)};
+    is $set->as_sql, qq{(SELECT id FROM table1 WHERE (foo = ?)) EXCEPT ALL (SELECT id FROM table2 WHERE (bar = ?)) UNION (SELECT id FROM table3 WHERE (baz = ?))};
     is join(', ', $set->bind), '100, 200, 300';
 };
 
@@ -246,17 +237,17 @@ SQL
     is( $s6->as_sql, check_sql(<<SQL) );
 SELECT g.id, true AS is_group, gsi.created_on
     FROM (
-    SELECT g1.id FROM group g1
+    (SELECT g1.id FROM group g1
         INNER JOIN group_member gm1 ON gm1.member_id = g1.id
         INNER JOIN member m3 ON gm1.member_id = m3.id
-        WHERE (g1.type = ?)
+        WHERE (g1.type = ?))
     EXCEPT 
-    SELECT g2.id FROM group g2
+    (SELECT g2.id FROM group g2
         INNER JOIN group_member gm2 ON gm2.member_id = g2.id
         WHERE (gm2.member_id NOT IN (
             (SELECT id FROM member WHERE (is_monger = ?))
         )) AND (g2.is_deleted = ?)
-    ) g INNER JOIN group_index gi ON gi.id = g.id WHERE (gi.lang = ?)
+    )) g INNER JOIN group_index gi ON gi.id = g.id WHERE (gi.lang = ?)
 SQL
 
     is join(', ', $s6->bind), 'hoge, t, f, ja';
@@ -271,27 +262,27 @@ SQL
 
     is( $s7->as_sql, check_sql(<<SQL) );
 SELECT id, is_group FROM (
-    SELECT mi.id, false AS is_group, mi.created_on
+    (SELECT mi.id, false AS is_group, mi.created_on
         FROM (
             SELECT m1.id, m1.created_on FROM (
                 SELECT id, created_on FROM member WHERE (is_deleted = ?)
             ) m1 WHERE (m1.id NOT IN ((SELECT member_id FROM group_member WHERE (is_beginner = ?))))
-        ) m2 INNER JOIN member_index mi ON mi.id = m2.id WHERE (mi.lang = ?)
+        ) m2 INNER JOIN member_index mi ON mi.id = m2.id WHERE (mi.lang = ?))
     UNION 
-    SELECT g.id, true AS is_group, gsi.created_on
+    (SELECT g.id, true AS is_group, gsi.created_on
         FROM (
-        SELECT g1.id FROM group g1
+        (SELECT g1.id FROM group g1
             INNER JOIN group_member gm1 ON gm1.member_id = g1.id
             INNER JOIN member m3 ON gm1.member_id = m3.id
-            WHERE (g1.type = ?)
+            WHERE (g1.type = ?))
         EXCEPT 
-            SELECT g2.id FROM group g2
+            (SELECT g2.id FROM group g2
             INNER JOIN group_member gm2 ON gm2.member_id = g2.id
             WHERE (gm2.member_id NOT IN (
                 (SELECT id FROM member WHERE (is_monger = ?))
             )) AND (g2.is_deleted = ?)
-        ) g INNER JOIN group_index gi ON gi.id = g.id WHERE (gi.lang = ?)
-) list_table ORDER BY created_on
+        )) g INNER JOIN group_index gi ON gi.id = g.id WHERE (gi.lang = ?)
+)) list_table ORDER BY created_on
 SQL
 
     is join(', ', $s7->bind), 'f, f, ja, hoge, t, f, ja';

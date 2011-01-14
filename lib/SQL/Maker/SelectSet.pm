@@ -32,7 +32,6 @@ BEGIN {
 # Methods
 #
 
-
 sub new {
     my $class = shift;
     my %args = @_==1 ? %{$_[0]} : @_;
@@ -46,15 +45,21 @@ sub new {
     return $set;
 }
 
-
 sub add_statement {
     my ($self, $statement) = @_;
 
-    unless ( Scalar::Util::blessed($statement) and $statement->can('as_sql') ) {
-        Carp::croak( "'$statement' doesn't have 'as_sql' method.");
+    unless ( Scalar::Util::blessed($statement) and $statement->can('as_sql') and $statement->can('bind') ) {
+        Carp::croak( "'$statement' doesn't have 'as_sql' and 'bind' methods.");
     }
     push @{$self->{statements}}, $statement;
     return $self; # method chain
+}
+
+sub _quote {
+    my ($self, $label) = @_;
+
+    return $$label if ref $label eq 'SCALAR';
+    SQL::Maker::Util::quote_identifier($label, $self->{quote_char}, $self->{name_sep})
 }
 
 sub as_sql {
@@ -63,10 +68,72 @@ sub as_sql {
     my $new_line = $self->new_line;
     my $operator = $self->operator;
 
-    return join(
+    my $sql = join(
         $new_line . $operator . $new_line,
-        map { $_->as_sql } @{ $self->{statements} }
+        map {
+            $_->isa('SQL::Maker::SelectSet') ? $_->as_sql : '(' . $_->as_sql . ')'
+        } @{ $self->{statements} }
     );
+
+    $sql .= $new_line;
+
+    $sql .= $self->as_sql_order_by  if $self->{order_by};
+    $sql .= $self->as_sql_limit     if $self->{limit};
+
+    $sql =~ s/${new_line}+$//;
+
+    return $sql;
+}
+
+sub offset {
+    if (@_==1) {
+        return $_[0]->{offset};
+    } else {
+        $_[0]->{offset} = $_[1];
+        return $_[0];
+    }
+}
+
+sub limit {
+    if (@_==1) {
+        return $_[0]->{limit};
+    } else {
+        $_[0]->{limit} = $_[1];
+        return $_[0];
+    }
+}
+
+sub as_sql_limit {
+    my $self = shift;
+    my $n = $self->{limit} or
+        return '';
+    die "Non-numerics in limit clause ($n)" if $n =~ /\D/;
+    return sprintf "LIMIT %d%s" . $self->new_line, $n,
+           ($self->{offset} ? " OFFSET " . int($self->{offset}) : "");
+}
+
+sub add_order_by {
+    my ($self, $col, $type) = @_;
+    push @{$self->{order_by}}, [$col, $type];
+    return $self;
+}
+
+sub as_sql_order_by {
+    my ($self) = @_;
+
+    my @attrs = @{$self->{order_by}};
+    return '' unless @attrs;
+
+    return 'ORDER BY '
+           . join(', ', map {
+                my ($col, $type) = @$_;
+                if (ref $col) {
+                    $$col
+                } else {
+                    $type ? $self->_quote($col) . " $type" : $self->_quote($col)
+                }
+           } @attrs)
+           . $self->new_line;
 }
 
 sub bind {
@@ -77,7 +144,6 @@ sub bind {
     }
     return @binds;
 }
-
 
 1;
 __END__
@@ -189,6 +255,14 @@ Returns bind variables.
 This method adds new statement object. C<< $stmt >> must provides 'as_sql' method.
 
 I<Return Value> is the $set itself.
+
+=item $stmt->add_order_by('foo');
+
+=item $stmt->add_order_by({'foo' => 'DESC'});
+
+Add new order by clause.
+I<Return Value> is the $set itself.
+
 
 =back
 
